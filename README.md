@@ -1,2 +1,2 @@
-# Grid-RealTime
-The Grid-RealTime component performs power flow for real time grid monitoring.
+# Grid
+The Grid component performs power flow for monitoring of the grid state in real-time.
