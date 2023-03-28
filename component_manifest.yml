@@ -1,0 +1,28 @@
+# The component manifest file for the NIS component
+
+Name: Grid
+Type: platform
+Description: "Grid component for the SimCES Platform"
+DockerImage: ghcr.io/mehdiattar-lab/
+Attributes:
+    PowerFlowPercision:
+        Environment: POWER_FLOW_PERCISION
+        Optional: true
+    MaxIteration:
+        Environment: MAX_ITERATION
+        Optional: true
+    ApparentPowerBase:
+        Environment: APPARENT_POWER_BASE
+        Optional: true
+    RootBus:
+        Environment: ROOT_BUS_VOLTAGE
+        Optional: true
+    Resources:
+        Environment: NUM_OF_RESOURCES
+        Optional: false
+    ResourceCategories:
+        Environment: RESOURCE_CATEGORIES
+        Optional: false
+    Grid:
+        Environment: GRID_ID
+        Optional: false
