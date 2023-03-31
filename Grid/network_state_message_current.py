@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-# Copyright 2023 Tampere University
+# Copyright 2023 Tampere University.
 # This software was developed as a part of doctroal studies of Mehdi Attar, funded by Fortum and Neste Foundation.
 #  This source code is licensed under the MIT license. See LICENSE in the repository root directory.
 # Author(s): Mehdi Attar <mehdi.attar@tuni.fi>
 #            software template : Ville Heikkilä <ville.heikkila@tuni.fi>
-"""This module contains the message class for the simulation platform network state messages (current)."""
+"""This module contains the message class for the simulation platform network state messages (current).
+https://simcesplatform.github.io/energy_msg-networkstate-current/ """
 
 from __future__ import annotations
 from typing import Any, Dict, List, Union
