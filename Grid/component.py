@@ -169,6 +169,8 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
         self._input_data_ready = False
         self._resource_id_logger = [0 for i in range(self._num_resources + 1)] # clearing the resource id logger in the beginning of the current epoch 
         self._resources = []
+        self._voltage_state = []
+        self._current_state = []
         
         LOGGER.info("Input parameters cleared for epoch {:d}".format(self._latest_epoch_message.epoch_number))
         
@@ -264,7 +266,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             LOGGER.info("17")
             self._resetting_lists()
 
-            # calculating nodal powers based on the power forecasts
+            # calculating nodal powers based on the resource powers
 
             for i in range (self._resource_state_msg_counter):
                 LOGGER.info("18")
@@ -273,7 +275,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 try:
                     temp_power = self._resources[i].real_power.value
                     LOGGER.info("temp_power is {}".format(temp_power))
-                    power_per_unit = (temp_power/self._apparent_power_base) # Per unit power
+                    power_per_unit = -(temp_power/self._apparent_power_base) # Per unit power. 
                     LOGGER.info("power per unit is {}".format(power_per_unit))
                 except BaseException as err:
                     LOGGER.info(f"Unexpected {err=}, {type(err)=}")
@@ -302,21 +304,21 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 LOGGER.info("bus name is {}".format(temp_bus_name))
 
                 if Connected_node == 1:
-                    self._bus["power_node_1"][temp_row] = power_per_unit + self._bus["power_node_1"][temp_row]
+                    self._bus["power_node_1"][temp_row] = power_per_unit + self._bus["power_node_1"][temp_row] # 
                 elif Connected_node == 2:
                     self._bus["power_node_2"][temp_row] = power_per_unit + self._bus["power_node_2"][temp_row]
                 elif Connected_node == 3:
                     self._bus["power_node_3"][temp_row] = power_per_unit + self._bus["power_node_3"][temp_row]
-                elif Connected_node == "three_phase":
+                elif Connected_node == 4:
                     power_per_unit_per_phase = power_per_unit/cmath.sqrt(3)  # calculate power per phase
                     self._bus["power_node_1"][temp_row] = power_per_unit_per_phase + self._bus["power_node_1"][temp_row]
                     self._bus["power_node_2"][temp_row] = power_per_unit_per_phase + self._bus["power_node_2"][temp_row]
                     self._bus["power_node_3"][temp_row] = power_per_unit_per_phase + self._bus["power_node_3"][temp_row]
 
-                LOGGER.info("Power at node 1 is {}".format(self._bus["power_node_1"])) 
-                LOGGER.info("Power at node 2 is {}".format(self._bus["power_node_2"])) 
-                LOGGER.info("Power at node 3 is {}".format(self._bus["power_node_3"]))
-                LOGGER.info("19") 
+            LOGGER.info("Power at node 1 is {}".format(self._bus["power_node_1"])) 
+            LOGGER.info("Power at node 2 is {}".format(self._bus["power_node_2"])) 
+            LOGGER.info("Power at node 3 is {}".format(self._bus["power_node_3"]))
+            LOGGER.info("19") 
 
             power_flow_error_node=10 # 10 is a value that is way larger than the aaceptable limit to make sure that the first iteration will begin
             iteration = 0    # Number of sweeps in the power flow
@@ -328,9 +330,11 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 LOGGER.info("20")
                 for bus in range (self._num_buses): 
                     LOGGER.info("bus is {}".format(bus))
-                    for node in range (0,3):   # for each phase
+                    for node in range (0,3):   # for each node
+                        LOGGER.info("node is {}".format((node)))
                         voltage_difference = self._bus[voltage_old_node[node]][bus] - self._bus["voltage_old_node_neutral"][bus]
-                        self._bus[current_node[node]][bus] = self._bus[power_node[node]][bus]/voltage_difference
+                        LOGGER.info("voltage difference is {}".format(cmath.polar(voltage_difference)))
+                        self._bus[current_node[node]][bus] = numpy.conj(self._bus[power_node[node]][bus]/voltage_difference)
                     self._bus["current_node_neutral"][bus]=-(self._bus["current_node_1"][bus]+self._bus["current_node_2"][bus]+self._bus["current_node_3"][bus])
 
                 for bus in range(self._num_buses): # taking into account line admittances
@@ -338,10 +342,16 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                         self._bus[current_node[node]][bus] = self._bus[current_node[node]][bus]-(self._bus[admittance_node[node]][bus]*self._bus[voltage_old_node[node]][bus])
 
 
+                for i in range (3):
+                    LOGGER.info("node is {}".format(i))
+                    for j in range (self._num_buses):
+                        LOGGER.info("bus is {}".format(j))
+                        LOGGER.info("the current at bus is {}".format(cmath.polar(self._bus[current_node[i]][j])))
+                
                 LOGGER.info("Current at node 1 is {}".format(self._bus[current_node[0]]))
                 LOGGER.info("Current at node 2 is {}".format(self._bus[current_node[1]]))
                 LOGGER.info("Current at node 3 is {}".format(self._bus[current_node[2]]))
-                LOGGER.info("Current at node neutral is {}".format(self._bus[current_node[3]])) 
+                LOGGER.info("Current at node neutral is {}".format(self._bus[current_node[3]]))
 
                 # calculating branch currents
                 LOGGER.info("21")
@@ -376,7 +386,12 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                                     self._branch["current_phase_neutral"][i] = 0
                 
                 LOGGER.info("22")
-                LOGGER.info("the branch current at phase 1 is {}".format(self._branch[current_phase[0]]))
+                for i in range (3):
+                    LOGGER.info("node is {}".format(i))
+                    for j in range (self._num_branches):
+                        LOGGER.info("branch is {}".format(j))
+                        LOGGER.info("the branch current at phase 1 is {}".format(cmath.polar(self._branch[current_phase[i]][j])))
+
                 LOGGER.info("the branch current at phase 2 is {}".format(self._branch[current_phase[1]]))
                 LOGGER.info("the branch current at phase 3 is {}".format(self._branch[current_phase[2]]))
                 LOGGER.info("the branch current at phase neutral is {}".format(self._branch[current_phase[3]]))
@@ -384,8 +399,14 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 # calculating the voltage drop over each branch
                 for row in range (self._num_branches):
                     for kk in range (0,4):
-                        self._branch[delta_v_phase[kk]][row] = -(self._branch[current_phase[kk]][row] * self._branch["impedance"][row]) # we add negative here becasue P consumption is assumed to be negative and p production is positive. Also only we assume that branch impedances are symmetric.
-                    
+                        self._branch[delta_v_phase[kk]][row] = self._branch[current_phase[kk]][row] * self._branch["impedance"][row]
+
+                for i in range (3):
+                    LOGGER.info("phase is {}".format(i))
+                    for j in range (self._num_branches):
+                        LOGGER.info("branch is {}".format(j))
+                        LOGGER.info("the voltage drop at phase is {}".format(cmath.polar(self._branch[delta_v_phase[i]][j])))
+
                 LOGGER.info("the voltage drop at phase 1 is {}".format(self._branch[delta_v_phase[0]]))
                 LOGGER.info("the voltage drop at phase 2 is {}".format(self._branch[delta_v_phase[1]]))
                 LOGGER.info("the voltage drop at phase 3 is {}".format(self._branch[delta_v_phase[2]]))
@@ -426,9 +447,20 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                                                 row = b
                                                 if len(shortest_path1) > shortest_path2_length:
                                                     for node in range (0,4):
+                                                        LOGGER.info("negative")
+                                                        LOGGER.info("from bus:{}".format(from_bus))
+                                                        LOGGER.info("to bus:{}".format(to_bus))
+                                                        LOGGER.info("available voltage is {}".format(cmath.polar(self._bus[voltage_new_node[node]][index])))
+                                                        LOGGER.info("available reduction is {}".format(cmath.polar(self._branch[delta_v_phase[node]][row])))
                                                         self._bus[voltage_new_node[node]][bus] = self._bus[voltage_new_node[node]][index] - self._branch[delta_v_phase[node]][row]
+                                                        LOGGER.info("voltage becomes {}".format(cmath.polar(self._bus[voltage_new_node[node]][bus])))
+                                                        LOGGER.info("the abs voltage becomes {}".format(cmath.polar(self._bus[voltage_new_node[node]][bus])))
+                                                        LOGGER.info("############")
                                                 else:
                                                     for node in range (0,4):
+                                                        LOGGER.info("positive")
+                                                        LOGGER.info("from bus:{}".format(from_bus))
+                                                        LOGGER.info("to bus:{}".format(to_bus))
                                                         self._bus[voltage_new_node[node]][bus] = self._bus[voltage_new_node[node]][index] + self._branch[delta_v_phase[node]][row]
                                                 break
                                         break
@@ -441,6 +473,10 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                     error[w] = abs(self._bus["voltage_old_node_1"][w]-self._bus["voltage_new_node_1"][w])
                 power_flow_error_node=max(error)
                 LOGGER.info("the maximum error is {}".format(power_flow_error_node))
+                LOGGER.info("voltage new for node 1 is : {}".format(self._bus["voltage_new_node_1"]))
+                LOGGER.info("voltage new for node 2 is : {}".format(self._bus["voltage_new_node_2"]))
+                LOGGER.info("voltage new for node 3 is : {}".format(self._bus["voltage_new_node_3"]))
+                LOGGER.info("voltage new for node neutral is : {}".format(self._bus["voltage_new_node_neutral"]))
 
                 if power_flow_error_node > self._power_flow_percision and iteration < self._max_iteration:
                     for p in range (4): # clear values for a fresh start
@@ -449,8 +485,10 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                         self._bus[current_node[p]] = [0 for i in range(self._num_buses)]
                         self._branch[current_phase[p]] = [0 for i in range(self._num_branches)]
                         self._branch[delta_v_phase[p]] = [0 for i in range(self._num_branches)]
-                    for node in range(3):
-                        self._bus[voltage_new_node[node]][self._root_bus_index] = self._root_bus_voltage
+                    self._bus["voltage_new_node_1"][self._root_bus_index] = self._root_bus_voltage
+                    self._bus["voltage_new_node_2"][self._root_bus_index] = cmath.rect(self._root_bus_voltage,4*math.pi/3)
+                    self._bus["voltage_new_node_3"][self._root_bus_index] = cmath.rect(self._root_bus_voltage,2*math.pi/3)
+
 
             else:
                 
@@ -463,11 +501,15 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 # storing voltage values as a result of power flow
                 for bus in range (self._num_buses):
                     bus_name = self._nis_bus_data.bus_name[bus]
+                    LOGGER.info("bus name is : {}".format(bus_name))
+                    voltage_base = self._nis_bus_data.bus_voltage_base.values[bus]
+                    LOGGER.info("voltage base is : {}".format(voltage_base))
                     for node in range (0,4):
                         row = bus*4 + node
-                        [absolute,angle] = cmath.polar(self._bus[voltage_new_node[node]][bus])
+                        voltage = self._bus[voltage_new_node[node]][bus]
+                        [absolute,angle] = cmath.polar(voltage*voltage_base)
                         self._voltage_state[row]["Magnitude"]["Value"] = absolute
-                        self._voltage_state[row]["Angle"]["Value"] = angle*(360/(2*3.1415))    # radian to degree
+                        self._voltage_state[row]["Angle"]["Value"] = angle*57.29    # radian to degree (360/(2*3.1415))=57.29
                         self._voltage_state[row]["Bus"] = bus_name
                         if node < 3:
                             self._voltage_state[row]["Node"] = node+1
@@ -477,13 +519,23 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 LOGGER.info("25")
                 for branch in range (self._num_branches):
                     device_id = self._nis_component_data.device_id[branch]
+                    sending_end_bus = self._nis_component_data.sending_end_bus[branch]
+                    index = self._nis_bus_data.bus_name.index(sending_end_bus)
+                    voltage_base = self._nis_bus_data.bus_voltage_base.values[index]
+                    s_base = []
+                    s_base = self._per_unit["s_base"]
+                    current_base = [x / ((voltage_base)*cmath.sqrt(3)) for x in s_base]
+                    LOGGER.info("device id is : {}".format(device_id))
+                    LOGGER.info("voltage base is : {}".format(voltage_base))
+                    LOGGER.info("current base is : {}".format(current_base))
                     for phase in range (0,4):
                         row = branch*4 + phase
-                        [absolute,angle] = cmath.polar(self._branch[current_phase[phase]][branch])
+                        current = self._branch[current_phase[phase]][branch]
+                        [absolute,angle] = cmath.polar(current*current_base[0])
                         self._current_state[row]["MagnitudeSendingEnd"]["Value"] = absolute    # we assume that current at sending end and receiving end of component is identical
                         self._current_state[row]["MagnitudeReceivingEnd"]["Value"] = absolute
-                        self._current_state[row]["AngleSendingEnd"]["Value"] = angle
-                        self._current_state[row]["AngleReceivingEnd"]["Value"] = angle
+                        self._current_state[row]["AngleSendingEnd"]["Value"] = angle*57.29    # radian to degree (360/(2*3.1415))=57.29
+                        self._current_state[row]["AngleReceivingEnd"]["Value"] = angle*57.29    # radian to degree (360/(2*3.1415))=57.29
                         self._current_state[row]["DeviceId"] = device_id 
                         if phase < 3:
                             self._current_state[row]["Phase"] = phase+1
@@ -604,7 +656,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 await self.process_epoch()
     
 
-    def _resource_state_message_handler(self,resource_state_data:ResourceStateMessage,resource_id:str) -> None:
+    def _resource_state_message_handler(self,resource_state_data,resource_id:str) -> None:
         if self._resource_state_msg_counter == [] or  self._resource_state_msg_counter == 0 :
             self._resource_state_msg_counter = 0
             self._resources.append(resource_state_data)
@@ -612,7 +664,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             self._resources[self._resource_state_msg_counter].resource_id = resource_id # we add one attribute tot he existing list becuse later in nodal power calculations we need it
             self. _node(self._resources[self._resource_state_msg_counter].node)
             self._resource_state_msg_counter = self._resource_state_msg_counter + 1
-            LOGGER.info("forecast message counter {}".format(self._resource_forecast_msg_counter)) 
+            LOGGER.info("forecast message counter {}".format(self._resource_state_msg_counter)) 
         else:
             try: 
                 self._resource_id_logger.index(resource_id) # if CustomerId doesnot exist, it goes to the exception
@@ -621,8 +673,8 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 self._resources.append(resource_state_data)
                 self._resource_id_logger[self._resource_state_msg_counter] = resource_id
                 self. _node(self._resources[self._resource_state_msg_counter].node)
-                self._resource[self._resource_state_msg_counter].resource_id = resource_id
-                self._resource_forecast_msg_counter = self._resource_state_msg_counter + 1
+                self._resources[self._resource_state_msg_counter].resource_id = resource_id
+                self._resource_state_msg_counter = self._resource_state_msg_counter + 1
                 LOGGER.info("network state message counter is {}".format(self._resource_state_msg_counter))  
     
     def _node(self,node_number):    # this function makes sure that we have "three_phase" value for the node attribute for 3 phase resources
@@ -630,7 +682,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             self._resources[self._resource_state_msg_counter].node = node_number
             LOGGER.info("there is node 1 or 2 or 3")
         else:
-            self._resources[self._resource_state_msg_counter].node="three_phase"
+            self._resources[self._resource_state_msg_counter].node = 4    # 4 means "three-phase"
             LOGGER.info("it is three phase")
     
     #def _resource_forecast_message_handler(self,forecasted_data:Union [ResourceForecastPowerMessage,TimeSeriesBlock]) -> None:
@@ -697,21 +749,27 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
         for node in range (4):
             self._bus[voltage_old_node[node]] = [0 for i in range(self._num_buses)]
             self._bus[voltage_new_node[node]] = [0 for i in range(self._num_buses)]
+        self._bus["voltage_new_node_1"][self._root_bus_index] = self._root_bus_voltage
+        self._bus["voltage_new_node_2"][self._root_bus_index] = cmath.rect(self._root_bus_voltage,4*math.pi/3)
+        self._bus["voltage_new_node_3"][self._root_bus_index] = cmath.rect(self._root_bus_voltage,2*math.pi/3)
+
         for bus in range (self._num_buses):
             self._bus["voltage_old_node_1"][bus] = self._root_bus_voltage
             self._bus["voltage_old_node_2"][bus] = cmath.rect(self._root_bus_voltage,4*math.pi/3)
             self._bus["voltage_old_node_3"][bus] = cmath.rect(self._root_bus_voltage,2*math.pi/3)
             self._bus["voltage_old_node_neutral"][bus] = 0
-        for node in range(3):
-            self._bus[voltage_new_node[node]][self._root_bus_index] = self._root_bus_voltage
 
         for node in range(4):
             self._bus[current_node[node]] = [0 for i in range(self._num_buses)]
             self._branch[current_phase[node]] = [0 for i in range(self._num_branches)]
             self._branch[delta_v_phase[node]] = [0 for i in range(self._num_branches)]
-        #LOGGER.info("the old bus voltage is {}".format(self._bus["voltage_old_node_1"]))
-        #LOGGER.info("the new bus voltage is {}".format(self._bus["voltage_new_node_1"]))
-        pass
+        LOGGER.info("the old bus voltage for node 1 is {}".format(self._bus["voltage_old_node_1"]))
+        LOGGER.info("the old bus voltage for node 2 is {}".format(self._bus["voltage_old_node_2"]))
+        LOGGER.info("the old bus voltage for node 3 is {}".format(self._bus["voltage_old_node_3"]))
+        LOGGER.info("the new bus voltage for node 1 is {}".format(self._bus["voltage_new_node_1"]))
+        LOGGER.info("the new bus voltage for node 2 is {}".format(self._bus["voltage_new_node_2"]))
+        LOGGER.info("the new bus voltage for node 3 is {}".format(self._bus["voltage_new_node_3"]))
+        return True
         
 
 

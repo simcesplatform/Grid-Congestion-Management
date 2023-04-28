@@ -59,7 +59,7 @@ class ResourceStateMessage(AbstractResultMessage):
     }
 
     # allowed values for the node attribute
-    ACCEPTED_NODE_VALUES = [1, 2, 3]
+    ACCEPTED_NODE_VALUES = [1, 2, 3, 4]
 
     @property
     def customerid(self) -> str:

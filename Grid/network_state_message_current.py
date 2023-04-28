@@ -38,8 +38,8 @@ class NetworkStateMessageCurrent(AbstractResultMessage):
 
     # attributes whose value should be a QuantityBlock and the expected unit of measure.
     QUANTITY_BLOCK_ATTRIBUTES = {
-        "MagnitudeSendingEnd": "kV",
-        "MagnitudeReceivingEnd": "kV",
+        "MagnitudeSendingEnd": "A",
+        "MagnitudeReceivingEnd": "A",
         "AngleSendingEnd": "deg",
         "AngleReceivingEnd": "deg"
     }
@@ -186,9 +186,9 @@ class NetworkStateMessageCurrent(AbstractResultMessage):
     @phase.setter
     def phase(self, phase: List[int,str]):
         if self._check_phase(phase):
-            self.__node=phase
+            self.__phase = phase
         else:
-            raise MessageValueError("Invalid value, {}, for attribute: node".format(phase))
+            raise MessageValueError("Invalid value, {}, for attribute: phase".format(phase))
 
     @classmethod
     def _check_phase(cls, phase: List[int,str]) -> bool:
