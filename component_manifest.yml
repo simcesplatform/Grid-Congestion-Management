@@ -26,3 +26,6 @@ Attributes:
     Grid:
         Environment: GRID_ID
         Optional: false
+    StorageResourceList:
+        Environment: STORAGE_RESOURCE_LIST
+        Optional: true
