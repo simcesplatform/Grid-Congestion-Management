@@ -306,12 +306,13 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             # Replcing static time series resource powers with storage resource powers
             for i in range (self._storage_resource_numbers):
                 customer_id=self._storage_resources[i].customerid
+                LOGGER.info("customerid is {}".format(customer_id))
                 for j in range (self._resource_state_msg_counter):
                     if customer_id == self._resources[j].customerid:
                         LOGGER.info("customerid is {}".format(customer_id))
                         LOGGER.info("realpower is {}".format(self._resources[j].real_power.value))
                         self._resources[j].real_power.value = self._storage_resources[i].real_power.value
-                        LOGGER.info("realpower is {}".format(self._resources[j].real_power.value))
+                        LOGGER.info("the new realpower is {}".format(self._resources[j].real_power.value))
             
             # calculating nodal powers based on the resource powers
 
@@ -329,15 +330,15 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 
                 # Finding the customerId
                 temp_customer_id = self._resources[i].customerid
-                #LOGGER.info("temp_customer_id {:s}".format(temp_customer_id))
+                LOGGER.info("temp_customer_id {:s}".format(temp_customer_id))
 
                 # finding the node that it is connected to
                 Connected_node = self._resources[i].node
-                #LOGGER.info("connected node is {}".format(Connected_node))
+                LOGGER.info("connected node is {}".format(Connected_node))
 
                 # finding the resourceId
                 temp_resource_id = self._resources[i].resource_id
-                #LOGGER.info("the resourceid is {}".format(temp_resource_id))
+                LOGGER.info("the resourceid is {}".format(temp_resource_id))
 
                 # finding the bus where the power should be added to
                 try:
@@ -656,6 +657,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             if self._storage_resource_existance == "True" and message_object.source_process_id in self._storage_resource_list:
                 self._storage_resources.append(message_object)
                 self._storage_resource_message_counter = self._storage_resource_message_counter + 1
+                LOGGER.info("the resource state message counter is {}".format(self._storage_resource_message_counter)) 
             else:
                 resource_id=message_routing_key[message_routing_key.index(".",14)+1:len(message_routing_key)] # the format of the topic is ResourceState.load/generator.ResourceId. in order to find the resource Id from the topic, we find the "." and then whatever after that is the resource iD
                 LOGGER.info("the resource_id is {}".format(resource_id))
@@ -722,8 +724,9 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             self._resource_id_logger[self._resource_state_msg_counter] = resource_id
             self._resources[self._resource_state_msg_counter].resource_id = resource_id # we add one attribute tot he existing list becuse later in nodal power calculations we need it
             self. _node(self._resources[self._resource_state_msg_counter].node)
-            LOGGER.info("the resource state message counter is {}".format(self._resource_state_msg_counter)) 
             self._resource_state_msg_counter = self._resource_state_msg_counter + 1
+            LOGGER.info("the resource state message counter is {}".format(self._resource_state_msg_counter)) 
+
         else:
             try: 
                 self._resource_id_logger.index(resource_id) # if CustomerId doesnot exist, it goes to the exception
@@ -733,8 +736,8 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 self._resource_id_logger[self._resource_state_msg_counter] = resource_id
                 self. _node(self._resources[self._resource_state_msg_counter].node)
                 self._resources[self._resource_state_msg_counter].resource_id = resource_id
-                LOGGER.info("the resource state message counter is {}".format(self._resource_state_msg_counter))
                 self._resource_state_msg_counter = self._resource_state_msg_counter + 1
+                LOGGER.info("the resource state message counter is {}".format(self._resource_state_msg_counter))
             #    LOGGER.info("the resourceid logger is {}".format(self._resource_id_logger))  
     
     def _node(self,node_number):    # this function makes sure that we have "three_phase" value for the node attribute for 3 phase resources
