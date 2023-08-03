@@ -53,7 +53,7 @@ STORAGE_RESOURCE_LIST = "STORAGE_RESOURCE_LIST"
 GRID_ID = "GRID_ID" # name of the grid 
 
 # time interval in seconds on how often to check whether the component is still running
-TIMEOUT = 2.0
+TIMEOUT = 0.5
 
 # ready made lists for further use in the code
 voltage_new_node = ["voltage_new_node_1","voltage_new_node_2","voltage_new_node_3","voltage_new_node_neutral"]
@@ -65,7 +65,7 @@ delta_v_phase = ["delta_v_phase_1","delta_v_phase_2","delta_v_phase_3","delta_v_
 current_phase = ["current_phase_1","current_phase_2","current_phase_3","current_phase_neutral"]
 
 
-class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeriesBlock,ValueArrayBlock,AbstractMessage): # the NetworkStatePredictor class inherits from AbstractSimulationComponent class
+class Grid(AbstractSimulationComponent):#QuantityBlock,QuantityArrayBlock,TimeSeriesBlock,ValueArrayBlock,AbstractMessage): # the NetworkStatePredictor class inherits from AbstractSimulationComponent class
     """
     The Grid component is initialized in the beginning of the simulation by the platform manager.
     Grid listens to NIS, CIS, and Resource. After that, the NSP runs power flow based on backward-forward sweep method.
@@ -195,8 +195,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             self._voltage_state = []
             self._current_state = []
             self._epoch_internal = self._latest_epoch_message.epoch_number
-        
-        LOGGER.info("Input parameters cleared for epoch {:d}".format(self._latest_epoch_message.epoch_number))
+            LOGGER.info("Input parameters cleared for epoch {:d}".format(self._latest_epoch_message.epoch_number))
         
 
 
@@ -330,15 +329,15 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                 
                 # Finding the customerId
                 temp_customer_id = self._resources[i].customerid
-                LOGGER.info("temp_customer_id {:s}".format(temp_customer_id))
+                #LOGGER.info("temp_customer_id {:s}".format(temp_customer_id))
 
                 # finding the node that it is connected to
                 Connected_node = self._resources[i].node
-                LOGGER.info("connected node is {}".format(Connected_node))
+                #LOGGER.info("connected node is {}".format(Connected_node))
 
                 # finding the resourceId
                 temp_resource_id = self._resources[i].resource_id
-                LOGGER.info("the resourceid is {}".format(temp_resource_id))
+                #LOGGER.info("the resourceid is {}".format(temp_resource_id))
 
                 # finding the bus where the power should be added to
                 try:
@@ -363,7 +362,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                     self._bus["power_node_2"][temp_row] = power_per_unit_per_phase + self._bus["power_node_2"][temp_row]
                     self._bus["power_node_3"][temp_row] = power_per_unit_per_phase + self._bus["power_node_3"][temp_row]
 
-        #    LOGGER.info("Power at node 1 is {}".format(self._bus["power_node_1"])) 
+            LOGGER.info("Power at node 1 is {}".format(self._bus["power_node_1"])) 
         #    LOGGER.info("Power at node 2 is {}".format(self._bus["power_node_2"])) 
         #    LOGGER.info("Power at node 3 is {}".format(self._bus["power_node_3"]))
             LOGGER.info("19") 
@@ -427,13 +426,17 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
                                     pass  
                 
                 LOGGER.info("22")
-                # for i in range (3):
-                #     LOGGER.info("node is {}".format(i))
-                #     for j in range (self._num_branches):
-                #         LOGGER.info("branch is {}".format(j))
-                #         LOGGER.info("the branch current at phase 1 is {}".format(cmath.polar(self._branch[current_phase[i]][j])))
+                #a=[]
+                #for i in range (1):
+                #    LOGGER.info("node is {}".format(i))
+                #    for j in range (self._num_branches):
+                #        LOGGER.info("branch is {}".format(j))
+                #        LOGGER.info("the branch current at phase 1 is {}".format(cmath.polar(self._branch[current_phase[i]][j])))
+                #        [c,d]=cmath.polar(self._branch[current_phase[i]][j])
+                #        a.append(c)
 
-                # LOGGER.info("the branch current at phase 2 is {}".format(self._branch[current_phase[1]]))
+                #LOGGER.info("branch current is {}".format(a))
+                #LOGGER.info("the branch current at phase 1 is {}".format(self._branch[current_phase[0]]))
                 # LOGGER.info("the branch current at phase 3 is {}".format(self._branch[current_phase[2]]))
                 # LOGGER.info("the branch current at phase neutral is {}".format(self._branch[current_phase[3]]))
 
@@ -639,7 +642,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             return True # return True to indicate that the component is finished with the current epoch
         else:
             LOGGER.info("input data arenot complete")
-            pass
+            return False
 
     async def general_message_handler(self, message_object: Union[BaseMessage,QuantityBlock, Any],
                                       message_routing_key: str) -> None:
@@ -714,7 +717,7 @@ class Grid(AbstractSimulationComponent,QuantityBlock,QuantityArrayBlock,TimeSeri
             self._storage_resource_message_counter == self._storage_resource_numbers:
                 self._input_data_ready = True
                 LOGGER.info("all required data were received, now ready for the actual functionality")
-                await self.process_epoch()
+                await self.start_epoch()
     
 
     def _resource_state_message_handler(self,resource_state_data,resource_id:str) -> None:
