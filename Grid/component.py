@@ -477,7 +477,7 @@ class Grid(AbstractSimulationComponent):#QuantityBlock,QuantityArrayBlock,TimeSe
                                 for a in range (length):
                                     index = self._nis_bus_data.bus_name.index(nearby_buses[a])
                 #                    LOGGER.info("Bus Name index is {}".format(index))
-                                    if self._bus[voltage_new_node[node]][index] > 0:
+                                    if abs(self._bus[voltage_new_node[node]][index]) > 0.1:
                 #                        LOGGER.info("the existing voltage is {}".format(self._bus[voltage_new_node[node]][index]))
                                         to_bus = nearby_buses[a]
                                         from_bus = bus_name
